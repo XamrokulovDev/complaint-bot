@@ -59,11 +59,9 @@ const saveUserChatIdToSupabase = async (chatId) => {
   }
 };
 
-// /start komandasini ishlatish
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
-  // Adminni tekshirish
   if (chatId.toString() === adminId.toString()) {
     sendAdminMessage(bot, adminId);
     return;
@@ -71,28 +69,55 @@ bot.onText(/\/start/, async (msg) => {
 
   const { firstName, lastName } = getUserFullName(msg);
 
-  saveUserChatIdToSupabase(chatId);
-
-  const options = {
-    reply_markup: {
-      keyboard: [
-        [
-          {
-            text: "📲 Kontakt yuborish",
-            request_contact: true,
-          },
-        ],
-      ],
-      resize_keyboard: true,
-      one_time_keyboard: true,
-    },
-  };
-
   try {
-    await bot.sendMessage(chatId, "📞 Telefon raqamingizni yuboring!", options);
-    console.log("Xabar yuborildi:", chatId);
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("chat_id", chatId);
+
+    if (error) {
+      console.error("Xatolik foydalanuvchini olishda:", error);
+      return;
+    }
+
+    if (data.length > 0) {
+      // Foydalanuvchi mavjud, menyuni ko‘rsatish
+      const feedbackOptions = {
+        reply_markup: {
+          keyboard: [
+            [
+              { text: "🗣 Shikoyat" },
+              { text: "💬 Taklif" },
+            ],
+            [{ text: "🍱 Menyu" }],
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      };
+
+      bot.sendMessage(chatId, "⏱️ Tanlang shikoyat yoki taklif!", feedbackOptions);
+    } else {
+      const options = {
+        reply_markup: {
+          keyboard: [
+            [
+              {
+                text: "📲 Kontakt yuborish",
+                request_contact: true,
+              },
+            ],
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      };
+
+      await bot.sendMessage(chatId, "📞 Telefon raqamingizni yuboring!", options);
+      console.log("Xabar yuborildi:", chatId);
+    }
   } catch (error) {
-    console.error("Xatolik yuz berdi:", error);
+    console.error("Xatolik Supabase bilan ulanishda:", error);
   }
 });
 
