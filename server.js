@@ -194,7 +194,6 @@ bot.onText(/🔙 Orqaga/, (msg) => {
     };
     bot.sendMessage(chatId, feedbackOptions);
   } else {
-    bot.sendMessage(chatId, "Ma'lumotlaringiz bekor qilindi! qayta /start ni bosing");
     delete userFeedback[chatId];
   }
 });
@@ -205,7 +204,11 @@ bot.onText(/(Kassir|Oshpaz|Tozalik)/, (msg, match) => {
 
   userFeedback[msg.chat.id].whats = selectedOption;
 
-  bot.sendMessage(msg.chat.id, `📝 ${selectedOption} ustidan nima shikoyatingiz bor?`);
+  bot.sendMessage(msg.chat.id, `📝 ${selectedOption} ustidan nima shikoyatingiz bor?`, {
+    reply_markup: {
+      remove_keyboard: true,
+    },
+  });
 });
 
 bot.on("message", (msg) => {
@@ -265,7 +268,7 @@ bot.on("message", (msg) => {
 bot.on("callback_query", (callbackQuery) => {
   const chatId = callbackQuery.message.chat.id;
   const action = callbackQuery.data;
-  const messageId = callbackQuery.message.message_id; // Xabar ID sini olish
+  const messageId = callbackQuery.message.message_id;
 
   try {
     if (action === "confirm") {
@@ -286,7 +289,6 @@ bot.on("callback_query", (callbackQuery) => {
           console.error("Xatolik yuz berdi!", error);
         });
 
-      // Xabarni o'chirish
       bot.deleteMessage(chatId, messageId)
         .then(() => {
           console.log("Tasdiqlash xabari o'chirildi.");
@@ -324,7 +326,23 @@ bot.on("callback_query", (callbackQuery) => {
         });
 
       delete userFeedback[chatId];
-      bot.sendMessage(chatId, "❌ Ma'lumotlaringiz bekor qilindi!", { reply_markup: { remove_keyboard: true } });
+      
+      const feedbackOptions = {
+        reply_markup: {
+          keyboard: [
+            [
+              { text: "🗣 Shikoyat" },
+              { text: "💬 Taklif" },
+            ],
+            [
+              { text: "🍱 Menyu" }
+            ]
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      };
+      bot.sendMessage(chatId, "❌ Ma'lumotlaringiz bekor qilindi!", feedbackOptions);
     }
   } catch (error) {
     console.error("Xatolik yuz berdi:", error);
@@ -346,5 +364,27 @@ bot.onText(/🍱 Menyu/, (msg) => {
 
   bot.sendPhoto(chatId, menu1Path);
   bot.sendPhoto(chatId, menu2Path);
-  bot.sendMessage(chatId, menuOptions);
+
+  bot.sendMessage(chatId, "🍽 Bizning menyu", menuOptions);
+});
+
+bot.onText(/🔙 Orqaga/, (msg) => {
+  const chatId = msg.chat.id;
+
+  const feedbackOptions = {
+    reply_markup: {
+      keyboard: [
+        [
+          { text: "🗣 Shikoyat" },
+          { text: "💬 Taklif" },
+        ],
+        [
+          { text: "🍱 Menyu" }
+        ]
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  };
+  bot.sendMessage(chatId, "🔖 Qanday shikoyat yoki taklifingiz bor!", feedbackOptions);
 });
