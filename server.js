@@ -2,13 +2,11 @@ const TelegramBot = require("node-telegram-bot-api");
 const dotenv = require("dotenv");
 const path = require("path");
 const { createClient } = require('@supabase/supabase-js');
-const sendAdminMessage = require("./admin");
 
 dotenv.config();
 
 const token = process.env.TOKEN;
 const groupChatId = `${process.env.GROUP}`;
-const adminId = process.env.ADMIN_CHAT_ID;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
@@ -65,11 +63,6 @@ const saveUserChatIdToSupabase = async (chatId) => {
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
-  if (chatId.toString() === adminId.toString()) {
-    sendAdminMessage(bot, adminId);
-    return;
-  }
-
   const { firstName, lastName } = getUserFullName(msg);
 
   const userExists = await saveUserChatIdToSupabase(chatId);
@@ -91,7 +84,7 @@ bot.onText(/\/start/, async (msg) => {
       },
     };
 
-    bot.sendMessage(chatId, "🔖 Qanday shikoyat yoki takliflaringiz bor!", feedbackOptions);
+    bot.sendMessage(chatId, "🔖 Qanday shikoyat yoki taklifingiz bor!", feedbackOptions);
     return;
   }
 
@@ -272,6 +265,7 @@ bot.on("message", (msg) => {
 bot.on("callback_query", (callbackQuery) => {
   const chatId = callbackQuery.message.chat.id;
   const action = callbackQuery.data;
+  const messageId = callbackQuery.message.message_id; // Xabar ID sini olish
 
   try {
     if (action === "confirm") {
@@ -282,7 +276,7 @@ bot.on("callback_query", (callbackQuery) => {
         message += `\n <b>👤 Kimga:</b> ${feedback.whats} `;
       }
 
-      message += `\n <b>📝 ${feedback.category}:</b> ${feedback.text}`
+      message += `\n <b>📝 ${feedback.category}:</b> ${feedback.text}`;
 
       bot.sendMessage(groupChatId, message, { parse_mode: "HTML" })
         .then(() => {
@@ -290,6 +284,15 @@ bot.on("callback_query", (callbackQuery) => {
         })
         .catch((error) => {
           console.error("Xatolik yuz berdi!", error);
+        });
+
+      // Xabarni o'chirish
+      bot.deleteMessage(chatId, messageId)
+        .then(() => {
+          console.log("Tasdiqlash xabari o'chirildi.");
+        })
+        .catch((error) => {
+          console.error("Xatolik yuz berdi xabarni o'chirishda:", error);
         });
 
       delete userFeedback[chatId];
@@ -309,32 +312,23 @@ bot.on("callback_query", (callbackQuery) => {
           one_time_keyboard: true,
         },
       };
-      bot.sendMessage(chatId, "✅ Ma'lumotlaringiz yuborildi!",feedbackOptions);
+      bot.sendMessage(chatId, "✅ Ma'lumotlaringiz yuborildi!", feedbackOptions);
 
     } else if (action === "cancel") {
-      bot.sendMessage(chatId, "❌ Amal bekor qilindi.");
+      bot.deleteMessage(chatId, messageId)
+        .then(() => {
+          console.log("Bekor qilish xabari o'chirildi.");
+        })
+        .catch((error) => {
+          console.error("Xatolik yuz berdi xabarni o'chirishda:", error);
+        });
 
       delete userFeedback[chatId];
-
-      const feedbackOptions = {
-        reply_markup: {
-          keyboard: [
-            [
-              { text: "🗣 Shikoyat" },
-              { text: "💬 Taklif" },
-            ],
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: true,
-        },
-      };
-      bot.sendMessage(chatId, feedbackOptions);
+      bot.sendMessage(chatId, "❌ Ma'lumotlaringiz bekor qilindi!", { reply_markup: { remove_keyboard: true } });
     }
   } catch (error) {
-    console.error("Xatolik yuz berdi callback_query-da:", error);
+    console.error("Xatolik yuz berdi:", error);
   }
-
-  delete userFeedback[chatId];
 });
 
 bot.onText(/🍱 Menyu/, (msg) => {
