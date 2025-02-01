@@ -150,7 +150,12 @@ bot.onText(/Shikoyat|Taklif/, (msg, match) => {
   userFeedback[msg.chat.id].last_name = lastName;
 
   if (category === "Taklif") {
-    bot.sendMessage(msg.chat.id, "💬 Taklifingizni kiriting!");
+    bot.sendMessage(msg.chat.id, "💬 Taklifingizni kiriting!",{
+      reply_markup: {
+        remove_keyboard: true,
+      },
+    }
+);
   } else {
     const complaintOptions = {
       reply_markup: {
